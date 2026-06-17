@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 690" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13.5">
+  <style>
+    .t { fill:#c9d1d9; }
+    .dim { fill:#6e7681; }
+    .hdr { fill:#39c5cf; }
+    .crit { fill:#f85149; font-weight:bold; }
+    .high { fill:#d29922; }
+    .med { fill:#bb8009; }
+    .low { fill:#58a6ff; }
+    .ok { fill:#3fb950; }
+    .admin { fill:#f85149; font-weight:bold; }
+    .prompt { fill:#3fb950; }
+  </style>
+
+  <!-- window -->
+  <rect x="0" y="0" width="900" height="690" rx="10" fill="#0d1117"/>
+  <rect x="0" y="0" width="900" height="34" rx="10" fill="#161b22"/>
+  <rect x="0" y="24" width="900" height="10" fill="#161b22"/>
+  <circle cx="20" cy="17" r="6" fill="#ff5f56"/>
+  <circle cx="40" cy="17" r="6" fill="#ffbd2e"/>
+  <circle cx="60" cy="17" r="6" fill="#27c93f"/>
+  <text x="450" y="21" text-anchor="middle" class="dim">iam-least-privilege — analyze</text>
+
+  <g xml:space="preserve">
+    <text x="18" y="62"><tspan class="prompt">$ </tspan><tspan class="t">python cli.py analyze --in data/mock_account.json</tspan></text>
+
+    <text x="18" y="98" class="hdr">=== 23 findings ===</text>
+    <text x="18" y="119"><tspan class="crit">[CRITICAL]</tspan><tspan class="t"> dev-user        dangerous-combo  PassRole→Lambda (iam:PassRole + lambda:CreateFunction)</tspan></text>
+    <text x="18" y="140"><tspan class="crit">[CRITICAL]</tspan><tspan class="t"> ci-deploy-user  dangerous-combo  Mint access keys for any user (iam:CreateAccessKey)</tspan></text>
+    <text x="18" y="161"><tspan class="crit">[CRITICAL]</tspan><tspan class="t"> legacy-admin    standing-admin   Human user holds standing administrator privileges</tspan></text>
+    <text x="18" y="182"><tspan class="high">[HIGH]    </tspan><tspan class="t"> ci-deploy-user  long-lived-key   Access key 419 days old (threshold 90)</tspan></text>
+    <text x="18" y="203"><tspan class="high">[HIGH]    </tspan><tspan class="t"> power-analyst   wildcard         ec2:* on '*' — every action in the ec2 service</tspan></text>
+    <text x="18" y="224" class="dim">           … +18 more findings (high / medium / low) — full detail in output/report.md</text>
+
+    <text x="18" y="260" class="hdr">=== Risk scoreboard ===</text>
+    <text x="18" y="281"><tspan class="t">100  </tspan><tspan class="crit">critical </tspan><tspan class="t"> dev-user          dangerous-combo, escalates-to-6</tspan></text>
+    <text x="18" y="302"><tspan class="t">100  </tspan><tspan class="crit">critical </tspan><tspan class="t"> ci-deploy-user    dangerous-combo, long-lived-key, wildcard, escalates-to-6</tspan></text>
+    <text x="18" y="323"><tspan class="t">100  </tspan><tspan class="crit">critical </tspan><tspan class="t"> power-analyst     over-provisioned, unused, wildcard</tspan></text>
+    <text x="18" y="344"><tspan class="t">100  </tspan><tspan class="crit">critical </tspan><tspan class="t"> lambda-exec-role  wildcard, escalates-to-6</tspan></text>
+    <text x="18" y="365"><tspan class="t"> 95  </tspan><tspan class="crit">critical </tspan><tspan class="t"> legacy-admin      long-lived-key, standing-admin, escalates-to-6</tspan></text>
+    <text x="18" y="386"><tspan class="t"> 40  </tspan><tspan class="high">high     </tspan><tspan class="t"> ec2-app-role      dangerous-combo</tspan></text>
+    <text x="18" y="407"><tspan class="t"> 40  </tspan><tspan class="high">high     </tspan><tspan class="t"> developers        dangerous-combo</tspan></text>
+    <text x="18" y="428"><tspan class="t">  0  </tspan><tspan class="low">low      </tspan><tspan class="t"> read-only-auditor  —  (clean baseline: tool does not cry wolf)</tspan></text>
+
+    <text x="18" y="464" class="hdr">=== 3 escalation path(s) to admin ===</text>
+    <text x="18" y="485"><tspan class="t">dev-user  via  iam:PassRole + lambda:CreateFunction</tspan></text>
+    <text x="18" y="506" class="dim">    start: dev-user  (low / standard privilege)</text>
+    <text x="18" y="527"><tspan class="t">    dev-user  →  lambda-exec-role     </tspan><tspan class="dim">[iam:PassRole + lambda:CreateFunction]</tspan></text>
+    <text x="18" y="548"><tspan class="t">    lambda-exec-role  →  </tspan><tspan class="admin">ADMIN</tspan><tspan class="dim">          [holds admin-equivalent permissions]</tspan></text>
+    <text x="18" y="569"><tspan class="t">ci-deploy-user  →  </tspan><tspan class="admin">ADMIN</tspan><tspan class="dim">               [iam:AttachUserPolicy]</tspan></text>
+    <text x="18" y="590"><tspan class="t">ec2-app-role    →  </tspan><tspan class="admin">ADMIN</tspan><tspan class="dim">               [iam:PutRolePolicy]</tspan></text>
+
+    <text x="18" y="640"><tspan class="ok">✓ 19 tests pass   ✓ ruff clean   ✓ 3/3 escalation paths cut after remediation</tspan></text>
+    <text x="18" y="663" class="dim">Findings map to NIST SP 800-207 (identity pillar) + AWS IAM best practice · read-only · no ML</text>
+  </g>
+</svg>

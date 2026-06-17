@@ -11,6 +11,10 @@ box**.
 > recommended policy cuts an attacker's reach.
 
 [![CI](https://github.com/MetaMaaz/iam-least-privilege/actions/workflows/ci.yml/badge.svg)](https://github.com/MetaMaaz/iam-least-privilege/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
+![Analyzer output on the bundled mock account](docs/demo.png)
 
 ---
 
