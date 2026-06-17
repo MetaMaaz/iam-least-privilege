@@ -1,0 +1,155 @@
+{
+  "account_id": "REDACTED-MOCK",
+  "_comment": "Hand-written, deliberately vulnerable IAM setup for offline testing. Every identity here exists to exercise one or more findings. See README for the intended escalation story: dev-user -> lambda-exec-role -> admin.",
+  "identities": [
+    {
+      "name": "legacy-admin",
+      "kind": "user",
+      "_intent": "Standing admin on a human user, plus an old access key, and not used in months (unused admin).",
+      "last_used": { "iam": 210, "ec2": 240, "s3": 198 },
+      "access_key_ages": [ 612 ],
+      "policies": [
+        {
+          "name": "AdministratorAccess",
+          "type": "aws-managed",
+          "permissions": [
+            { "action": "*", "resource": "*", "effect": "Allow" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "dev-user",
+      "kind": "user",
+      "_intent": "Low-privilege developer on paper, but holds iam:PassRole + lambda:CreateFunction = the classic privilege-escalation pair. Entry point of the escalation path.",
+      "attached_groups": [ "developers" ],
+      "last_used": { "lambda": 3, "logs": 5, "iam": 12 },
+      "access_key_ages": [ 45 ],
+      "policies": [
+        {
+          "name": "developer-inline",
+          "type": "inline",
+          "permissions": [
+            { "action": "lambda:CreateFunction", "resource": "*", "effect": "Allow" },
+            { "action": "lambda:InvokeFunction", "resource": "*", "effect": "Allow" },
+            { "action": "lambda:UpdateFunctionCode", "resource": "*", "effect": "Allow" },
+            { "action": "iam:PassRole", "resource": "*", "effect": "Allow" },
+            { "action": "logs:CreateLogGroup", "resource": "*", "effect": "Allow" },
+            { "action": "s3:GetObject", "resource": "arn:aws:s3:::app-artifacts/*", "effect": "Allow" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ci-deploy-user",
+      "kind": "user",
+      "_intent": "CI service account using a long-lived access key. Holds iam:CreateAccessKey on * = can mint credentials for ANY user, including admins. Second escalation entry point.",
+      "last_used": { "iam": 1, "s3": 1, "cloudformation": 2 },
+      "access_key_ages": [ 419 ],
+      "policies": [
+        {
+          "name": "ci-deploy",
+          "type": "managed",
+          "permissions": [
+            { "action": "iam:CreateAccessKey", "resource": "*", "effect": "Allow" },
+            { "action": "iam:AttachUserPolicy", "resource": "*", "effect": "Allow" },
+            { "action": "cloudformation:*", "resource": "*", "effect": "Allow" },
+            { "action": "s3:*", "resource": "*", "effect": "Allow" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "power-analyst",
+      "kind": "user",
+      "_intent": "Data analyst with broad wildcard grants they don't use. ec2/rds untouched for months = unused, over-provisioned.",
+      "last_used": { "s3": 4, "athena": 6, "ec2": 130, "rds": 160 },
+      "access_key_ages": [ 88 ],
+      "policies": [
+        {
+          "name": "analyst-power",
+          "type": "managed",
+          "permissions": [
+            { "action": "s3:*", "resource": "*", "effect": "Allow" },
+            { "action": "athena:*", "resource": "*", "effect": "Allow" },
+            { "action": "ec2:*", "resource": "*", "effect": "Allow" },
+            { "action": "rds:*", "resource": "*", "effect": "Allow" },
+            { "action": "glue:*", "resource": "*", "effect": "Allow" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "read-only-auditor",
+      "kind": "user",
+      "_intent": "Well-scoped baseline identity. Should produce no high findings — proves the tool does not cry wolf.",
+      "last_used": { "s3": 2, "cloudtrail": 1, "config": 3 },
+      "access_key_ages": [ 30 ],
+      "policies": [
+        {
+          "name": "audit-readonly",
+          "type": "managed",
+          "permissions": [
+            { "action": "s3:GetObject", "resource": "arn:aws:s3:::audit-logs/*", "effect": "Allow" },
+            { "action": "s3:ListBucket", "resource": "arn:aws:s3:::audit-logs", "effect": "Allow" },
+            { "action": "cloudtrail:LookupEvents", "resource": "*", "effect": "Allow" },
+            { "action": "config:Get*", "resource": "*", "effect": "Allow" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lambda-exec-role",
+      "kind": "role",
+      "_intent": "Lambda execution role with near-admin IAM rights. Trusts the lambda service, so anyone who can create+invoke a Lambda (dev-user) inherits these rights. The escalation target.",
+      "trusted_principals": [ "lambda.amazonaws.com" ],
+      "last_used": { "iam": 8, "s3": 8 },
+      "policies": [
+        {
+          "name": "lambda-exec-overbroad",
+          "type": "inline",
+          "permissions": [
+            { "action": "iam:*", "resource": "*", "effect": "Allow" },
+            { "action": "s3:*", "resource": "*", "effect": "Allow" },
+            { "action": "dynamodb:*", "resource": "*", "effect": "Allow" },
+            { "action": "logs:CreateLogStream", "resource": "*", "effect": "Allow" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ec2-app-role",
+      "kind": "role",
+      "_intent": "Application role on EC2. Holds iam:PutRolePolicy on itself = can grant itself anything (self-escalation).",
+      "trusted_principals": [ "ec2.amazonaws.com" ],
+      "last_used": { "s3": 2, "iam": 40 },
+      "policies": [
+        {
+          "name": "ec2-app",
+          "type": "inline",
+          "permissions": [
+            { "action": "iam:PutRolePolicy", "resource": "*", "effect": "Allow" },
+            { "action": "s3:GetObject", "resource": "arn:aws:s3:::app-config/*", "effect": "Allow" },
+            { "action": "sqs:SendMessage", "resource": "*", "effect": "Allow" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "developers",
+      "kind": "group",
+      "_intent": "Group that grants its members (dev-user) extra reach, including sts:AssumeRole on * — broad assume-role.",
+      "policies": [
+        {
+          "name": "developers-group",
+          "type": "managed",
+          "permissions": [
+            { "action": "sts:AssumeRole", "resource": "*", "effect": "Allow" },
+            { "action": "cloudwatch:GetMetricData", "resource": "*", "effect": "Allow" },
+            { "action": "logs:FilterLogEvents", "resource": "*", "effect": "Allow" }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "s3:Get*",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:List*",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:Describe*",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "athena:Get*",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "athena:List*",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "athena:Describe*",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "glue:Get*",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "glue:List*",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "glue:Describe*",
+      "Resource": "*"
+    }
+  ]
+}

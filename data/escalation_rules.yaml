@@ -1,0 +1,114 @@
+# Known IAM privilege-escalation techniques.
+#
+# Prior art: these patterns are the well-documented AWS IAM privilege-escalation
+# methods catalogued by Rhino Security Labs ("AWS IAM Privilege Escalation –
+# Methods and Mitigation") and echoed across cloud-security research. We model
+# them as edges in a graph (see escalation.py); BloodHound does the equivalent
+# for Active Directory. We cite that lineage rather than copy it.
+#
+# Each rule declares:
+#   id            unique key
+#   name          human label
+#   technique     short "what it abuses" string for the report
+#   requires_all  every action must be held (prefix-aware: 'iam:*' satisfies 'iam:PassRole')
+#   edge_type     how escalation.py turns the grant into graph edges:
+#                   self_escalation  -> identity can grant itself anything -> reaches ADMIN
+#                   passrole_service -> + create/invoke a service -> reaches roles trusting that service
+#                   assume_role      -> reaches roles the identity may assume
+#                   access_key       -> reaches any user (mint their credentials)
+#                   login_profile    -> reaches any user (set their console password)
+#   service       (passrole_service only) the AWS service principal the role must trust
+#   principle     framework citation
+#   cut_by        the remediation that breaks this edge
+
+rules:
+  - id: self_put_user_policy
+    name: "Attach inline admin policy to self"
+    technique: "iam:PutUserPolicy"
+    requires_all: ["iam:PutUserPolicy"]
+    edge_type: self_escalation
+    principle: "NIST SP 800-207 (least privilege) — an identity must not be able to broaden its own grants. AWS: avoid policy-write actions on self."
+    cut_by: "Remove iam:PutUserPolicy, or constrain it with a permissions boundary so self-grants cannot exceed the boundary."
+
+  - id: self_attach_user_policy
+    name: "Attach managed admin policy to self"
+    technique: "iam:AttachUserPolicy"
+    requires_all: ["iam:AttachUserPolicy"]
+    edge_type: self_escalation
+    principle: "NIST SP 800-207 (least privilege). AWS IAM best practice: do not grant iam:Attach* broadly."
+    cut_by: "Remove iam:AttachUserPolicy or apply a permissions boundary capping the effective grant."
+
+  - id: self_put_role_policy
+    name: "Grant self via inline role policy"
+    technique: "iam:PutRolePolicy"
+    requires_all: ["iam:PutRolePolicy"]
+    edge_type: self_escalation
+    principle: "NIST SP 800-207 (least privilege). A role that can edit its own policy is unbounded."
+    cut_by: "Remove iam:PutRolePolicy or scope the Resource to roles other than self, under a permissions boundary."
+
+  - id: self_create_policy_version
+    name: "Set a new default policy version"
+    technique: "iam:CreatePolicyVersion + iam:SetDefaultPolicyVersion"
+    requires_all: ["iam:CreatePolicyVersion"]
+    edge_type: self_escalation
+    principle: "NIST SP 800-207 (least privilege). Editing an attached managed policy rewrites effective permissions."
+    cut_by: "Remove iam:CreatePolicyVersion / iam:SetDefaultPolicyVersion from non-administrators."
+
+  - id: passrole_lambda
+    name: "PassRole into a Lambda function"
+    technique: "iam:PassRole + lambda:CreateFunction + lambda:InvokeFunction"
+    requires_all: ["iam:PassRole", "lambda:CreateFunction"]
+    edge_type: passrole_service
+    service: "lambda.amazonaws.com"
+    principle: "AWS IAM best practice: scope iam:PassRole to specific role ARNs. NIST SP 800-207: per-request, least-privilege access."
+    cut_by: "Constrain iam:PassRole to a Resource ARN list that excludes privileged roles; the dev identity then cannot pass lambda-exec-role."
+
+  - id: passrole_ec2
+    name: "PassRole into an EC2 instance profile"
+    technique: "iam:PassRole + ec2:RunInstances"
+    requires_all: ["iam:PassRole", "ec2:RunInstances"]
+    edge_type: passrole_service
+    service: "ec2.amazonaws.com"
+    principle: "AWS IAM best practice: scope iam:PassRole; prefer narrowly-trusted instance profiles."
+    cut_by: "Scope iam:PassRole to non-privileged instance-profile roles only."
+
+  - id: passrole_glue
+    name: "PassRole into a Glue job"
+    technique: "iam:PassRole + glue:CreateJob"
+    requires_all: ["iam:PassRole", "glue:CreateJob"]
+    edge_type: passrole_service
+    service: "glue.amazonaws.com"
+    principle: "AWS IAM best practice: scope iam:PassRole to specific roles."
+    cut_by: "Scope iam:PassRole away from privileged Glue roles."
+
+  - id: assume_role_chain
+    name: "Assume a more-privileged role"
+    technique: "sts:AssumeRole"
+    requires_all: ["sts:AssumeRole"]
+    edge_type: assume_role
+    principle: "NIST SP 800-207: every access request evaluated per-request. Broad sts:AssumeRole defeats role separation."
+    cut_by: "Scope sts:AssumeRole to an explicit allow-list of role ARNs; remove Resource '*'."
+
+  - id: create_access_key
+    name: "Mint access keys for another user"
+    technique: "iam:CreateAccessKey on another user"
+    requires_all: ["iam:CreateAccessKey"]
+    edge_type: access_key
+    principle: "NIST SP 800-207 (least privilege). AWS: iam:CreateAccessKey on '*' lets one identity impersonate any user."
+    cut_by: "Scope iam:CreateAccessKey to the principal's own user ARN (${aws:username})."
+
+  - id: create_login_profile
+    name: "Set a console password for another user"
+    technique: "iam:CreateLoginProfile / iam:UpdateLoginProfile on another user"
+    requires_all: ["iam:CreateLoginProfile"]
+    edge_type: login_profile
+    principle: "NIST SP 800-207 (least privilege). Setting another user's password is account takeover."
+    cut_by: "Scope iam:CreateLoginProfile / UpdateLoginProfile to self only."
+
+  - id: update_assume_role_policy
+    name: "Rewrite a role's trust policy then assume it"
+    technique: "iam:UpdateAssumeRolePolicy + sts:AssumeRole"
+    requires_all: ["iam:UpdateAssumeRolePolicy"]
+    edge_type: self_escalation
+    principle: "NIST SP 800-207. Editing trust policies lets an identity make any role assumable by itself."
+    cut_by: "Remove iam:UpdateAssumeRolePolicy from non-administrators."

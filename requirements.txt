@@ -1,0 +1,9 @@
+# Core (offline pipeline) — pure Python + YAML rule files.
+PyYAML>=6.0
+
+# Testing.
+pytest>=7.4
+
+# Optional: only needed for `cli.py ingest --live` (real AWS, read-only).
+# Lazy-imported, so the offline pipeline runs without it.
+# boto3>=1.34

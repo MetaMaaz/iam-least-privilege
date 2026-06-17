@@ -1,0 +1,87 @@
+# Sensitive-action catalogue used by classifier.py.
+#
+# Data-driven so the heuristics are easy to defend in an interview and easy to
+# extend. Each service prefix is mapped to a sensitivity weight and the reason
+# it matters. The classifier flags any identity holding an Allow on these and
+# uses the weights when deciding a privilege tier.
+#
+# Sensitivity scale: 3 = account-takeover potential, 2 = data/infra impact,
+# 1 = noteworthy but lower blast radius.
+
+sensitive_services:
+  iam:
+    sensitivity: 3
+    reason: "Identity and access management — can create users, attach policies, escalate privilege."
+  sts:
+    sensitivity: 3
+    reason: "Security Token Service — AssumeRole chains enable lateral movement and privilege escalation."
+  organizations:
+    sensitivity: 3
+    reason: "Account-level control across the whole AWS Organization."
+  kms:
+    sensitivity: 3
+    reason: "Key management — controls decryption of data at rest."
+  ec2:
+    sensitivity: 2
+    reason: "Compute and networking — instance, security-group and VPC control."
+  s3:
+    sensitivity: 2
+    reason: "Object storage — common location of sensitive data and logs."
+  lambda:
+    sensitivity: 2
+    reason: "Serverless compute — can run code under an attached execution role (escalation vector with iam:PassRole)."
+  rds:
+    sensitivity: 2
+    reason: "Managed databases — direct access to stored data."
+  dynamodb:
+    sensitivity: 2
+    reason: "NoSQL data store — direct access to stored data."
+  secretsmanager:
+    sensitivity: 3
+    reason: "Stored secrets and credentials."
+  ssm:
+    sensitivity: 2
+    reason: "Systems Manager — SendCommand can run code on instances; parameter store holds secrets."
+  cloudtrail:
+    sensitivity: 2
+    reason: "Audit logging — StopLogging / DeleteTrail enables anti-forensics."
+  cloudformation:
+    sensitivity: 2
+    reason: "Infrastructure as code — can deploy stacks that create privileged resources."
+  ecr:
+    sensitivity: 1
+    reason: "Container registry — image tampering vector."
+  account:
+    sensitivity: 1
+    reason: "Account settings and billing."
+
+# Actions that, on their own, are high-signal regardless of the service weight.
+# Matched literally or by prefix (e.g. 'iam:Put*' matches 'iam:PutUserPolicy').
+high_signal_actions:
+  - "*"
+  - "iam:*"
+  - "iam:CreateAccessKey"
+  - "iam:CreateUser"
+  - "iam:AttachUserPolicy"
+  - "iam:AttachRolePolicy"
+  - "iam:PutUserPolicy"
+  - "iam:PutRolePolicy"
+  - "iam:PutGroupPolicy"
+  - "iam:CreatePolicyVersion"
+  - "iam:SetDefaultPolicyVersion"
+  - "iam:PassRole"
+  - "iam:UpdateAssumeRolePolicy"
+  - "sts:AssumeRole"
+  - "kms:Decrypt"
+  - "secretsmanager:GetSecretValue"
+  - "ssm:SendCommand"
+  - "cloudtrail:StopLogging"
+  - "cloudtrail:DeleteTrail"
+
+# Privilege-tier thresholds. The classifier sums a coarse "reach" score and
+# maps it to a tier. Tunable without touching code.
+tier_thresholds:
+  admin: 100   # holds '*' or 'iam:*' on '*' — effectively unlimited
+  power: 30    # several sensitive wildcards
+  standard: 8  # some scoped sensitive access
+  limited: 0   # narrowly scoped, read-mostly

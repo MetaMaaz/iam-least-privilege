@@ -1,0 +1,17 @@
+# Real AWS data — never commit account IDs, ARNs, or keys.
+inventory.json
+export.json
+*account-authorization-details*.json
+!ingest/account_authorization_details.json   # the redacted sample is intentional
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS
+.DS_Store

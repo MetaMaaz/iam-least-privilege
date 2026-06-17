@@ -1,0 +1,98 @@
+{
+  "_comment": "Redacted sample of `aws iam get-account-authorization-details` output. Account IDs/ARNs scrubbed to 000000000000. Proves the real-ingestion path without needing an AWS account. Run: python cli.py ingest --export ingest/account_authorization_details.json --out inventory.json && python cli.py report --in inventory.json",
+  "_account_id": "REDACTED-000000000000",
+  "UserDetailList": [
+    {
+      "UserName": "build-bot",
+      "Arn": "arn:aws:iam::000000000000:user/build-bot",
+      "GroupList": ["ci"],
+      "UserPolicyList": [
+        {
+          "PolicyName": "build-bot-inline",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": ["iam:PassRole", "lambda:CreateFunction", "lambda:InvokeFunction"],
+                "Resource": "*"
+              },
+              {
+                "Effect": "Allow",
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::build-artifacts/*"
+              }
+            ]
+          }
+        }
+      ],
+      "AttachedManagedPolicies": []
+    },
+    {
+      "UserName": "ops-admin",
+      "Arn": "arn:aws:iam::000000000000:user/ops-admin",
+      "GroupList": [],
+      "UserPolicyList": [],
+      "AttachedManagedPolicies": [
+        {"PolicyName": "AdministratorAccess", "PolicyArn": "arn:aws:iam::aws:policy/AdministratorAccess"}
+      ]
+    }
+  ],
+  "GroupDetailList": [
+    {
+      "GroupName": "ci",
+      "Arn": "arn:aws:iam::000000000000:group/ci",
+      "GroupPolicyList": [
+        {
+          "PolicyName": "ci-assume",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {"Effect": "Allow", "Action": "sts:AssumeRole", "Resource": "*"}
+            ]
+          }
+        }
+      ],
+      "AttachedManagedPolicies": []
+    }
+  ],
+  "RoleDetailList": [
+    {
+      "RoleName": "deploy-exec-role",
+      "Arn": "arn:aws:iam::000000000000:role/deploy-exec-role",
+      "AssumeRolePolicyDocument": {
+        "Version": "2012-10-17",
+        "Statement": [
+          {"Effect": "Allow", "Principal": {"Service": "lambda.amazonaws.com"}, "Action": "sts:AssumeRole"}
+        ]
+      },
+      "RolePolicyList": [
+        {
+          "PolicyName": "deploy-exec-inline",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {"Effect": "Allow", "Action": ["iam:*", "s3:*"], "Resource": "*"}
+            ]
+          }
+        }
+      ],
+      "AttachedManagedPolicies": []
+    }
+  ],
+  "Policies": [
+    {
+      "PolicyName": "AdministratorAccess",
+      "Arn": "arn:aws:iam::aws:policy/AdministratorAccess",
+      "PolicyVersionList": [
+        {
+          "IsDefaultVersion": true,
+          "Document": {
+            "Version": "2012-10-17",
+            "Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]
+          }
+        }
+      ]
+    }
+  ]
+}
