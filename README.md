@@ -155,17 +155,6 @@ committed sample export is scrubbed to `000000000000`.
 
 ---
 
-## CV bullet
-
-> Built an explainable, rules-based **AWS IAM least-privilege analyzer** in Python that
-> classifies identities, detects over-provisioned access and **privilege-escalation paths**
-> (graph-based, BloodHound-style), and generates applicable least-privilege IAM policies —
-> with every finding mapped to NIST SP 800-207 and AWS best practice, validated offline
-> against mock IAM and via read-only `get-account-authorization-details` exports. CI on
-> GitHub Actions; unit-tested reasoning engine.
-
----
-
 ## Prior art & references
 
 - Rhino Security Labs — *AWS IAM Privilege Escalation: Methods and Mitigation* (the
